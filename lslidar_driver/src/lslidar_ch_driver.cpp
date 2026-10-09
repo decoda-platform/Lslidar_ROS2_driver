@@ -69,6 +69,10 @@ namespace lslidar_driver {
         node_->declare_parameter<std::vector<double>>("transform_main", std::vector<double>());
         node_->declare_parameter<std::vector<double>>("transform_imu", std::vector<double>());
 
+        // Decoda: publish detect-dev's UnifiedPoint layout and cap the output rate.
+        node_->declare_parameter<bool>("output_unified_point", false);
+        node_->declare_parameter<double>("max_publish_rate_hz", 0.0);
+
         node_->get_parameter("pcap", dump_file);
         node_->get_parameter("packet_rate", packet_rate);
         node_->get_parameter("frame_id", frame_id);
@@ -98,6 +102,9 @@ namespace lslidar_driver {
         node_->get_parameter("scan_num", channel_num);
         node_->get_parameter("echo_mode", echo_mode);
         node_->get_parameter("lidar_model", lidar_model);
+
+        node_->get_parameter("output_unified_point", output_unified_point);
+        min_publish_period = minPublishPeriod(node_->get_parameter("max_publish_rate_hz").as_double());
 
         // 获取转换矩阵
         node_->get_parameter("is_MatrixTransformation", is_MatrixTransformation);
@@ -134,6 +141,8 @@ namespace lslidar_driver {
         LS_PARAM << "packet rate: " << packet_rate << LS_END;
         LS_PARAM << "add multicast: " << std::boolalpha << add_multicast << LS_END;     
         LS_PARAM << "frame id: " << frame_id << LS_END;
+        LS_PARAM << "output unified point: " << std::boolalpha << output_unified_point << LS_END;
+        LS_PARAM << "min publish period: " << min_publish_period << " s" << LS_END;
         LS_PARAM << "pointcloud topic: " << pointcloud_topic << LS_END;
         LS_PARAM << "use time service: " << std::boolalpha << use_time_service << LS_END;
         LS_PARAM << "use first point time: " << std::boolalpha << use_first_point_time << LS_END;
@@ -417,11 +426,17 @@ namespace lslidar_driver {
         std::unique_lock<std::mutex> lock(pointcloud_lock);
 
         if (point_cloud_xyzirt_bak_->points.size() < 100) return;
+        // Gate before transforming -- a dropped frame must not cost the per-point work.
+        if (!shouldPublish(point_cloud_time, last_publish_time, min_publish_period)) return;
         if (is_pretreatment) pointcloud_transform_.applyTransform(*point_cloud_xyzirt_bak_);   
         if (is_MatrixTransformation) pointcloud_transform_.applyTransform_2(*point_cloud_xyzirt_bak_, MatrixTransform_result);
         
         auto pc_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();     
-        pcl::toROSMsg(*point_cloud_xyzirt_bak_, *pc_msg);
+        if (output_unified_point) {
+            toUnifiedCloud(*point_cloud_xyzirt_bak_, frame_id, *pc_msg);
+        } else {
+            pcl::toROSMsg(*point_cloud_xyzirt_bak_, *pc_msg);
+        }
         pc_msg->header.stamp = rclcpp::Time(point_cloud_time * 1000000000LL);
         pointcloud_pub_->publish(*pc_msg);
 

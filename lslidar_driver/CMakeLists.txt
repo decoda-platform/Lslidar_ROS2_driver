@@ -113,6 +113,12 @@ install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_unified_point test/test_unified_point.cpp)
+  target_link_libraries(test_unified_point lslidar_driver)
+endif()
+
 ament_export_include_directories(include)
 ament_export_libraries(lslidar_driver)
 ament_export_dependencies(
