@@ -477,6 +477,13 @@ namespace lslidar_driver {
                     lidar_info_data_->lidar_serial_number = device.lidarSerialNumber;
                     lidar_info_data_->fpga_board_2_program = device.secondBoardProgram;
                     lidar_info_data_->fpga_board_3_program = device.thirdBoardProgram;
+
+                    // Decoda: runtime status the vendor message leaves out.
+                    const DifopStatus status = parseChDifopStatus(
+                        difop_packet->data.data(), lidar_model == "CH128X1");
+                    lidar_info_data_->motor_speed_rpm = status.motor_speed_rpm;
+                    lidar_info_data_->time_service_mode = status.time_service_mode;
+                    lidar_info_data_->dust_mode = status.dust_mode;
                     lidar_info_pub_->publish(*lidar_info_data_);
 
                     if (gain_prism_angle) {

@@ -20,6 +20,7 @@
 #define LSLIDAR_CH_DRIVER_HPP
 
 #include "lslidar_driver/lslidar_driver.hpp"
+#include "lslidar_driver/difop_status.hpp"
 #include "lslidar_driver/unified_point.hpp"
 
 #include <cmath>

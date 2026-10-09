@@ -93,3 +93,23 @@ TEST(ShouldPublish, ClockStepBackwardsReAnchors) {
     EXPECT_FALSE(shouldPublish(50.05, last, period));
     EXPECT_TRUE(shouldPublish(50.1, last, period));
 }
+
+#include "lslidar_driver/difop_status.hpp"
+
+TEST(DifopStatus, ParsesCh128x1Fields) {
+    uint8_t difop[1206] = {};
+    difop[8] = 0x04; difop[9] = 0xB1;  // 1201 rpm, as a 20 Hz lidar measures
+    difop[44] = 1;                     // gPTP
+    difop[51] = 0x01;                  // dust on
+    const auto s = lslidar_driver::parseChDifopStatus(difop, true);
+    EXPECT_EQ(s.motor_speed_rpm, 1201);
+    EXPECT_EQ(s.time_service_mode, 1);
+    EXPECT_EQ(s.dust_mode, 1);
+}
+
+TEST(DifopStatus, DustUnknownOnOtherModels) {
+    uint8_t difop[1206] = {};
+    difop[51] = 0x01;
+    EXPECT_EQ(lslidar_driver::parseChDifopStatus(difop, false).dust_mode,
+              lslidar_driver::kDustModeUnknown);
+}
