@@ -20,6 +20,7 @@
 #define LSLIDAR_CH_DRIVER_HPP
 
 #include "lslidar_driver/lslidar_driver.hpp"
+#include "lslidar_driver/unified_point.hpp"
 
 #include <cmath>
 #include <unordered_map>
@@ -255,6 +256,11 @@ namespace lslidar_driver {
         double roll;
         double pitch;
         double yaw;
+
+        // Decoda: see unified_point.hpp. Both off by default.
+        bool output_unified_point = false;
+        double min_publish_period = 0.0;  // 0 disables the rate cap
+        double last_publish_time = 0.0;   // guarded by pointcloud_lock
     };
 
     typedef LslidarChDriver::LslidarChDriverPtr LslidarChDriverPtr;
