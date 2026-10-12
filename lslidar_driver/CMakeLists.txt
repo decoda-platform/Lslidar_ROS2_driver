@@ -11,6 +11,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(lslidar_msgs REQUIRED)
 find_package(Boost REQUIRED COMPONENTS thread)
@@ -67,6 +68,7 @@ target_link_libraries(lslidar_driver
 ament_target_dependencies(lslidar_driver
   rclcpp
   sensor_msgs
+  diagnostic_msgs
   std_msgs
   lslidar_msgs
   ament_index_cpp
@@ -124,6 +126,7 @@ ament_export_libraries(lslidar_driver)
 ament_export_dependencies(
   rclcpp
   sensor_msgs
+  diagnostic_msgs
   std_msgs
   lslidar_msgs
   pcl_conversions

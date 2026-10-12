@@ -113,3 +113,37 @@ TEST(DifopStatus, DustUnknownOnOtherModels) {
     EXPECT_EQ(lslidar_driver::parseChDifopStatus(difop, false).dust_mode,
               lslidar_driver::kDustModeUnknown);
 }
+
+#include "lslidar_driver/difop_diagnostics.hpp"
+
+TEST(DifopDiagnostics, MeasuredSpeedNearSetpointIsOk) {
+    EXPECT_TRUE(lslidar_driver::motorAtSetpoint(1201));
+    EXPECT_TRUE(lslidar_driver::motorAtSetpoint(584));
+    EXPECT_TRUE(lslidar_driver::motorAtSetpoint(300));
+    EXPECT_FALSE(lslidar_driver::motorAtSetpoint(0));
+    EXPECT_FALSE(lslidar_driver::motorAtSetpoint(900));  // between 600 and 1200
+}
+
+TEST(DifopDiagnostics, BuildsStatusWithValues) {
+    lslidar_driver::DifopStatus s;
+    s.motor_speed_rpm = 1200;
+    s.time_service_mode = 0;
+    s.dust_mode = 1;
+    const auto d = lslidar_driver::makeDifopDiagnostic("lslidar: rear", "XZSCD260501040026", s);
+    EXPECT_EQ(d.level, diagnostic_msgs::msg::DiagnosticStatus::OK);
+    EXPECT_EQ(d.name, "lslidar: rear");
+    EXPECT_EQ(d.hardware_id, "XZSCD260501040026");
+    ASSERT_EQ(d.values.size(), 3u);
+    EXPECT_EQ(d.values[0].key, "motor_speed_rpm");
+    EXPECT_EQ(d.values[0].value, "1200");
+    EXPECT_EQ(d.values[2].key, "dust_mode");
+    EXPECT_EQ(d.values[2].value, "1");
+}
+
+TEST(DifopDiagnostics, StalledMotorWarnsAndUnknownDustIsOmitted) {
+    lslidar_driver::DifopStatus s;  // rpm 0, dust unknown
+    const auto d = lslidar_driver::makeDifopDiagnostic("lslidar: front", "", s);
+    EXPECT_EQ(d.level, diagnostic_msgs::msg::DiagnosticStatus::WARN);
+    ASSERT_EQ(d.values.size(), 2u);
+    EXPECT_EQ(d.values[1].key, "time_service_mode");
+}

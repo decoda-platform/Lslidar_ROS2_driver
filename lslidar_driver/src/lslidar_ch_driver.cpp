@@ -176,6 +176,13 @@ namespace lslidar_driver {
         lidar_info_pub_ = node_->create_publisher<lslidar_msgs::msg::LslidarInformation>("lslidar_device_info", 1);
         time_pub_ = node_->create_publisher<std_msgs::msg::Float64>("time_topic", 10);
 
+        // Named after the namespace ("/front" -> "lslidar: front") so each lidar's entry is
+        // distinguishable on the shared topic.
+        diagnostics_pub_ = node_->create_publisher<diagnostic_msgs::msg::DiagnosticArray>("/diagnostics", 10);
+        std::string ns = node_->get_namespace();
+        ns.erase(0, ns.find_first_not_of('/'));
+        diagnostic_name = "lslidar: " + (ns.empty() ? node_->get_name() : ns);
+
         network_config_service_ = node_->create_service<lslidar_msgs::srv::IpAndPort>("network_setup",
             [this](std::shared_ptr<lslidar_msgs::srv::IpAndPort::Request> req,
                    std::shared_ptr<lslidar_msgs::srv::IpAndPort::Response> res) {
@@ -485,6 +492,12 @@ namespace lslidar_driver {
                     lidar_info_data_->time_service_mode = status.time_service_mode;
                     lidar_info_data_->dust_mode = status.dust_mode;
                     lidar_info_pub_->publish(*lidar_info_data_);
+
+                    diagnostic_msgs::msg::DiagnosticArray diagnostics;
+                    diagnostics.header.stamp = node_->now();
+                    diagnostics.status.push_back(
+                        makeDifopDiagnostic(diagnostic_name, device.lidarSerialNumber, status));
+                    diagnostics_pub_->publish(diagnostics);
 
                     if (gain_prism_angle) {
                         // 240 241   左边 增加角度
